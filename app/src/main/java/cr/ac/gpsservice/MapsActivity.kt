@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.constraintlayout.motion.widget.Debug.getLocation
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -21,13 +22,18 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.maps.android.PolyUtil
+import com.google.maps.android.data.geojson.GeoJsonLayer
+import com.google.maps.android.data.geojson.GeoJsonPolygon
 import cr.ac.gpsservice.Db.LocationDatabase
 import cr.ac.gpsservice.Entity.Location
 import cr.ac.gpsservice.Service.GpsService
 import cr.ac.gpsservice.databinding.ActivityMapsBinding
+import org.json.JSONObject
 
 private lateinit var mMap: GoogleMap
 private lateinit var locationDatabase: LocationDatabase
+private lateinit var layer : GeoJsonLayer
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -43,6 +49,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
     private lateinit var binding: ActivityMapsBinding
+
     private val SOLICITAR_GPS = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +75,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         iniciaServicio()
         recuperarPuntos()
+        definePoligono(mMap)
+
 
     }
 
@@ -147,6 +156,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
+
+
     class ProgressReceiver : BroadcastReceiver(){
         override fun onReceive(context: Context, intent: Intent) {
             if(intent.action == GpsService.GPS){
@@ -156,10 +168,115 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 val punto = LatLng(localizacion.latitude, localizacion.longitude)
                 mMap.addMarker(MarkerOptions().position(punto).title("marker in aaaa"))
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(punto))
+
+                if (PolyUtil.containsLocation(localizacion.latitude,
+                    localizacion.longitude,
+                    getPolygon(layer)!!.outerBoundaryCoordinates, false)){
+                    Toast.makeText(context,"dentro de la zona ",Toast.LENGTH_SHORT).show()
+                }
+                else{
+                    Toast.makeText(context,"fuera de la zona ",Toast.LENGTH_SHORT).show()
+                }
             }
+
+
 
         }
 
+        fun getPolygon(layer: GeoJsonLayer): GeoJsonPolygon? {
+            for (feature in layer.features) {
+                return feature.geometry as GeoJsonPolygon }
+            return null }
+
     }
+
+    /**
+     * DENTRO DE LA ZONA
+     */
+    fun definePoligono(googleMap: GoogleMap){
+        val geoJsonData= JSONObject("" +
+                "{\n" +
+                "  \"type\": \"FeatureCollection\",\n" +
+                "  \"features\": [\n" +
+                "    {\n" +
+                "      \"type\": \"Feature\",\n" +
+                "      \"properties\": {},\n" +
+                "      \"geometry\": {\n" +
+                "        \"type\": \"Polygon\",\n" +
+                "        \"coordinates\": [\n" +
+                "          [\n" +
+                "            [\n" +
+                "              -86.55029296875,\n" +
+                "              7.841615185204699\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -81.89208984375,\n" +
+                "              7.841615185204699\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -81.89208984375,\n" +
+                "              11.458490752653873\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -86.55029296875,\n" +
+                "              11.458490752653873\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -86.55029296875,\n" +
+                "              7.841615185204699\n" +
+                "            ]\n" +
+                "          ]\n" +
+                "        ]\n" +
+                "      }\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}")
+        layer = GeoJsonLayer(googleMap, geoJsonData)
+        layer.addLayerToMap()
+    }
+
+    /**
+     * FUERA DE LA ZONA
+     */
+  /*  fun definePoligono(googleMap: GoogleMap){
+        val geoJsonData= JSONObject("{\n" +
+                "  \"type\": \"FeatureCollection\",\n" +
+                "  \"features\": [\n" +
+                "    {\n" +
+                "      \"type\": \"Feature\",\n" +
+                "      \"properties\": {},\n" +
+                "      \"geometry\": {\n" +
+                "        \"type\": \"Polygon\",\n" +
+                "        \"coordinates\": [\n" +
+                "          [\n" +
+                "            [\n" +
+                "              -80.4638671875,\n" +
+                "              4.258768357307995\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -72.2900390625,\n" +
+                "              4.258768357307995\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -72.2900390625,\n" +
+                "              10.098670120603392\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -80.4638671875,\n" +
+                "              10.098670120603392\n" +
+                "            ],\n" +
+                "            [\n" +
+                "              -80.4638671875,\n" +
+                "              4.258768357307995\n" +
+                "            ]\n" +
+                "          ]\n" +
+                "        ]\n" +
+                "      }\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}")
+        layer = GeoJsonLayer(googleMap, geoJsonData)
+        layer.addLayerToMap() }*/
+
 }
 
